@@ -3,30 +3,28 @@ name: Build macOS App
 on:
   push:
     tags:
-      - 'v*' # 當你推送標籤如 v1.0 時觸發
+      - 'v*'           # 推送標籤觸發（自動創建 Release）
+  workflow_dispatch:    # 👈 這行就是手動「按按鈕」觸發功能
 
 jobs:
-  build-macos:
+  macos-build:
     runs-on: macos-latest
     steps:
-      - name: 檢出代碼
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: 設置 Python
+      - name: Python Setup
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: 安裝依賴
-        run: |
-          pip install pyinstaller pedalboard
+      - name: Install Dependencies
+        run: pip install pyinstaller pedalboard
 
-      - name: 運行打包
-        run: |
-          # 這裡直接調用剛才寫好的本地腳本
-          python build_app.py
+      - name: Build App
+        run: python build_app.py
 
-      - name: 製作 DMG 安裝包
+      - name: Create DMG
         run: |
           brew install create-dmg
           create-dmg \
@@ -34,12 +32,19 @@ jobs:
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
-            --icon "立体声空间生成器.app" 175 120 \
+            --icon "StereoGenerator.app" 175 120 \
             --app-drop-link 425 120 \
             "dist/StereoGenerator_Installer.dmg" \
-            "dist/立体声空间生成器.app"
+            "dist/StereoGenerator.app"
 
-      - name: 發布到 Release
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: macOS-DMG
+          path: dist/StereoGenerator_Installer.dmg
+
+      - name: Release Asset (Optional)
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: dist/StereoGenerator_Installer.dmg
