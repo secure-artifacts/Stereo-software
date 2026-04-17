@@ -6,6 +6,11 @@ on:
       - 'v*'           # 推送標籤觸發（自動創建 Release）
   workflow_dispatch:    # 👈 這行就是手動「按按鈕」觸發功能
 
+permissions:
+  id-token: write       # 必须：用于通过 OIDC 获取签名证书
+  attestations: write   # 必须：用于将证明写入 GitHub
+  contents: read        # 读取仓库代码的基本权限
+  
 jobs:
   macos-build:
     runs-on: macos-latest
@@ -42,7 +47,7 @@ jobs:
         with:
           name: macOS-DMG
           path: dist/StereoGenerator_Installer.dmg
-
+  
       - name: Release Asset (Optional)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
