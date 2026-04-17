@@ -1,57 +1,38 @@
-name: Build macOS App
+name: Release Python Package
 
 on:
   push:
     tags:
-      - 'v*'           # 推送標籤觸發（自動創建 Release）
-  workflow_dispatch:    # 👈 這行就是手動「按按鈕」觸發功能
-
-permissions:
-  id-token: write       # 必须：用于通过 OIDC 获取签名证书
-  attestations: write   # 必须：用于将证明写入 GitHub
-  contents: read        # 读取仓库代码的基本权限
-  
+      - 'v*'
+      
 jobs:
-  macos-build:
-    runs-on: macos-latest
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Python Setup
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
-      - name: Install Dependencies
-        run: pip install pyinstaller pedalboard
+      - name: Install Build Tools
+        run: pip install build
 
-      - name: Build App
-        run: python build_app.py
+      - name: Build Package
+        run: python -m build
 
-      - name: Create DMG
-        run: |
-          brew install create-dmg
-          create-dmg \
-            --volname "Stereo Generator" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --icon "StereoGenerator.app" 175 120 \
-            --app-drop-link 425 120 \
-            "dist/StereoGenerator_Installer.dmg" \
-            "dist/StereoGenerator.app"
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Attest
+        uses: actions/attest-build-provenance@v2
         with:
-          name: macOS-DMG
-          path: dist/StereoGenerator_Installer.dmg
-  
-      - name: Release Asset (Optional)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+          subject-path: 'dist/*'
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          files: dist/StereoGenerator_Installer.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: dist/*
